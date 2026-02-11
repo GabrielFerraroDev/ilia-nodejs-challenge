@@ -194,6 +194,34 @@ Services communicate via **RabbitMQ RPC** (request-reply pattern) instead of RES
 
 Benefits: **decoupling** (no URL knowledge), **resilience** (persistent queues), **scalability** (multiple consumers)
 
+## Observability
+
+Both services include structured logging, metrics, and request tracing out of the box.
+
+### Structured Logging (Pino)
+
+- **JSON logs** in production, **pretty-printed** in development
+- Every HTTP request automatically logged with method, URL, status, and latency
+- Sensitive headers (`Authorization`, `Cookie`, `Set-Cookie`) are **redacted** from logs
+- Configurable via `LOG_LEVEL` env var (`debug`, `info`, `warn`, `error`)
+
+### Prometheus Metrics
+
+Each service exposes a `GET /metrics` endpoint with default Node.js process metrics:
+
+```bash
+curl http://localhost:3001/metrics   # wallet-service
+curl http://localhost:3002/metrics   # users-service
+```
+
+Metrics include: HTTP request duration, heap usage, event loop lag, active handles, GC stats. Ready for Grafana/Alertmanager scraping.
+
+### Request Correlation IDs
+
+- Every request gets a unique `reqId` (UUID) logged on every line
+- Pass `X-Correlation-Id` header to trace a request across both services via RabbitMQ
+- If no header is provided, a UUID is auto-generated
+
 ## Local Development
 
 ```bash
