@@ -33,42 +33,42 @@ curl http://localhost:3002/health   # → {"status":"ok","service":"users-servic
 
 ```bash
 # 1. Register
-curl -s -X POST http://localhost:3002/api/auth/register \
+curl -s -X POST http://localhost:3002/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name":"John","email":"john@example.com","password":"123456"}'
 
 # 2. Login (saves refresh token cookie)
-curl -s -c cookies.txt -X POST http://localhost:3002/api/auth/login \
+curl -s -c cookies.txt -X POST http://localhost:3002/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"john@example.com","password":"123456"}'
 # → {"accessToken":"eyJ...","user":{...}}
 
 # 3. Deposit (replace <TOKEN> with the accessToken from step 2)
-curl -s -X POST http://localhost:3002/api/users/me/transactions \
+curl -s -X POST http://localhost:3002/api/v1/users/me/transactions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <TOKEN>" \
   -d '{"type":"DEPOSIT","amount":100.50,"description":"Initial deposit"}'
 
 # 4. Check balance
-curl -s http://localhost:3002/api/users/me/balance \
+curl -s http://localhost:3002/api/v1/users/me/balance \
   -H "Authorization: Bearer <TOKEN>"
 # → {"userId":"...","balance":100.5}
 
 # 5. Withdraw
-curl -s -X POST http://localhost:3002/api/users/me/transactions \
+curl -s -X POST http://localhost:3002/api/v1/users/me/transactions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <TOKEN>" \
   -d '{"type":"WITHDRAWAL","amount":30.00,"description":"ATM withdrawal"}'
 
 # 6. List transactions
-curl -s http://localhost:3002/api/users/me/transactions \
+curl -s http://localhost:3002/api/v1/users/me/transactions \
   -H "Authorization: Bearer <TOKEN>"
 
 # 7. Refresh access token (uses HTTP-only cookie)
-curl -s -b cookies.txt -X POST http://localhost:3002/api/auth/refresh
+curl -s -b cookies.txt -X POST http://localhost:3002/api/v1/auth/refresh
 
 # 8. Logout
-curl -s -b cookies.txt -X POST http://localhost:3002/api/auth/logout
+curl -s -b cookies.txt -X POST http://localhost:3002/api/v1/auth/logout
 ```
 
 ## Architecture
@@ -125,6 +125,7 @@ This means you can swap Prisma for any other data source without touching busine
 | **Messaging**  | RabbitMQ via `@nestjs/microservices` (RPC pattern)          |
 | **Auth**       | JWT (15min) + refresh token (7 days, HTTP-only cookie)      |
 | **Validation** | `class-validator` + `class-transformer` (NestJS pipes)      |
+| **Security**   | Helmet, CORS, rate limiting (`@nestjs/throttler`), bcrypt   |
 | **Containers** | Docker + Docker Compose                                     |
 | **DI**         | NestJS IoC with interface-based custom providers            |
 
@@ -135,10 +136,10 @@ This means you can swap Prisma for any other data source without touching busine
 | Method | Endpoint               | Auth     | Description              |
 |--------|------------------------|----------|--------------------------|
 | GET    | /health                | —        | Health check             |
-| POST   | /api/transactions      | JWT      | Create transaction       |
-| GET    | /api/transactions      | JWT      | List transactions        |
-| GET    | /api/transactions/:id  | JWT      | Get transaction by ID    |
-| GET    | /api/balance           | JWT      | Get current balance      |
+| POST   | /api/v1/transactions      | JWT      | Create transaction       |
+| GET    | /api/v1/transactions      | JWT      | List transactions        |
+| GET    | /api/v1/transactions/:id  | JWT      | Get transaction by ID    |
+| GET    | /api/v1/balance           | JWT      | Get current balance      |
 | POST   | /internal/transactions | Internal | Create transaction (S2S) |
 | GET    | /internal/transactions | Internal | List transactions (S2S)  |
 | GET    | /internal/balance      | Internal | Get balance (S2S)        |
@@ -150,16 +151,16 @@ This means you can swap Prisma for any other data source without touching busine
 | Method | Endpoint                   | Auth | Description                         |
 |--------|----------------------------|------|-------------------------------------|
 | GET    | /health                    | —    | Health check                        |
-| POST   | /api/auth/register         | —    | Register new user                   |
-| POST   | /api/auth/login            | —    | Login (returns JWT + cookie)        |
-| POST   | /api/auth/refresh          | —    | Refresh access token (uses cookie)  |
-| POST   | /api/auth/logout           | —    | Logout (revokes refresh token)      |
-| GET    | /api/users/me              | JWT  | Get profile                         |
-| PUT    | /api/users/me              | JWT  | Update profile                      |
-| DELETE | /api/users/me              | JWT  | Delete account                      |
-| GET    | /api/users/me/balance      | JWT  | Get wallet balance (via RabbitMQ)   |
-| POST   | /api/users/me/transactions | JWT  | Create transaction (via RabbitMQ)   |
-| GET    | /api/users/me/transactions | JWT  | List transactions (via RabbitMQ)    |
+| POST   | /api/v1/auth/register         | —    | Register new user                   |
+| POST   | /api/v1/auth/login            | —    | Login (returns JWT + cookie)        |
+| POST   | /api/v1/auth/refresh          | —    | Refresh access token (uses cookie)  |
+| POST   | /api/v1/auth/logout           | —    | Logout (revokes refresh token)      |
+| GET    | /api/v1/users/me              | JWT  | Get profile                         |
+| PUT    | /api/v1/users/me              | JWT  | Update profile                      |
+| DELETE | /api/v1/users/me              | JWT  | Delete account                      |
+| GET    | /api/v1/users/me/balance      | JWT  | Get wallet balance (via RabbitMQ)   |
+| POST   | /api/v1/users/me/transactions | JWT  | Create transaction (via RabbitMQ)   |
+| GET    | /api/v1/users/me/transactions | JWT  | List transactions (via RabbitMQ)    |
 
 ## Database Design (3NF)
 
@@ -290,4 +291,6 @@ npm run dev
 | CI/CD pipeline | GitHub Actions: lint → build → unit → e2e with ephemeral Postgres |
 | Docker Compose | One-command local setup: 2 DBs + RabbitMQ + 2 services |
 | Observability | Pino structured logging + Prometheus `/metrics` + correlation IDs |
+| API versioning | URI-based versioning (`/api/v1/...`), infrastructure routes unversioned |
+| Security hardening | Helmet headers, CORS, rate limiting (100 req/min), graceful shutdown |
 | Security | Bcrypt passwords, SHA-256 hashed refresh tokens, sensitive header redaction |

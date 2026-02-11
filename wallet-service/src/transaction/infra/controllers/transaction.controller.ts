@@ -22,7 +22,7 @@ export class TransactionController {
 
   // --- Public routes (JWT auth) ---
 
-  @Post('api/transactions')
+  @Post('api/v1/transactions')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   async create(
@@ -37,19 +37,19 @@ export class TransactionController {
     });
   }
 
-  @Get('api/transactions')
+  @Get('api/v1/transactions')
   @UseGuards(JwtAuthGuard)
   async list(@Req() req: any, @Query() query: ListTransactionsDto) {
     return this.listTransactions.execute({ userId: req.userId, ...query });
   }
 
-  @Get('api/transactions/:id')
+  @Get('api/v1/transactions/:id')
   @UseGuards(JwtAuthGuard)
   async findById(@Req() req: any, @Param('id') id: string) {
     return this.findTransactionById.execute(id, req.userId);
   }
 
-  @Get('api/balance')
+  @Get('api/v1/balance')
   @UseGuards(JwtAuthGuard)
   async balance(@Req() req: any) {
     return this.getBalance.execute(req.userId);
