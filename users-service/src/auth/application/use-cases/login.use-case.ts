@@ -27,9 +27,10 @@ export class LoginUseCase {
     const accessToken = this.jwtService.sign({ userId: user.id });
 
     const refreshToken = crypto.randomUUID();
+    const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await this.refreshTokenRepo.create({
-      token: refreshToken,
+      token: refreshTokenHash,
       userId: user.id,
       expiresAt: refreshExpiresAt,
     });

@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { createHash } from 'crypto';
 import { IRefreshTokenRepository } from '../../domain/interfaces/repositories/refresh-token-repository.interface';
 
 @Injectable()
@@ -10,7 +11,8 @@ export class RefreshTokenUseCase {
   ) {}
 
   async execute(token: string) {
-    const record = await this.refreshTokenRepo.findByToken(token);
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const record = await this.refreshTokenRepo.findByToken(tokenHash);
 
     if (!record || record.revokedAt || record.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid or expired refresh token');
