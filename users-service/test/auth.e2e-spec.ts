@@ -10,7 +10,7 @@ describe('Users Auth (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let accessToken: string;
-  let cookies: string[];
+  let cookies: string | string[];
 
   const testUser = {
     name: 'E2E Test User',
