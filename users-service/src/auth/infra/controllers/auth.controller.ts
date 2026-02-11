@@ -10,7 +10,7 @@ import { LoginDto } from '../../application/dto/login.dto';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
 const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
-@Controller('api/auth')
+@Controller('api/v1/auth')
 export class AuthController {
   constructor(
     private readonly registerUseCase: RegisterUseCase,
@@ -35,7 +35,7 @@ export class AuthController {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: REFRESH_TOKEN_MAX_AGE,
-      path: '/api/auth',
+      path: '/api/v1/auth',
     });
 
     return { accessToken: result.accessToken, user: result.user };
@@ -58,6 +58,6 @@ export class AuthController {
     if (refreshToken) {
       await this.logoutUseCase.execute(refreshToken);
     }
-    res.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/api/auth' });
+    res.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/api/v1/auth' });
   }
 }

@@ -52,22 +52,22 @@ describe('Wallet Transactions (e2e)', () => {
   describe('Authentication', () => {
     it('should reject requests without JWT', () => {
       return request(app.getHttpServer())
-        .get('/api/balance')
+        .get('/api/v1/balance')
         .expect(401);
     });
 
     it('should reject requests with invalid JWT', () => {
       return request(app.getHttpServer())
-        .get('/api/balance')
+        .get('/api/v1/balance')
         .set('Authorization', 'Bearer invalid-token')
         .expect(401);
     });
   });
 
-  describe('POST /api/transactions', () => {
+  describe('POST /api/v1/transactions', () => {
     it('should create a DEPOSIT transaction', async () => {
       const res = await request(app.getHttpServer())
-        .post('/api/transactions')
+        .post('/api/v1/transactions')
         .set('Authorization', `Bearer ${token}`)
         .send({ type: 'DEPOSIT', amount: 500, description: 'Initial deposit' })
         .expect(201);
@@ -83,7 +83,7 @@ describe('Wallet Transactions (e2e)', () => {
 
     it('should create a WITHDRAWAL transaction', async () => {
       const res = await request(app.getHttpServer())
-        .post('/api/transactions')
+        .post('/api/v1/transactions')
         .set('Authorization', `Bearer ${token}`)
         .send({ type: 'WITHDRAWAL', amount: 150, description: 'Withdrawal' })
         .expect(201);
@@ -94,7 +94,7 @@ describe('Wallet Transactions (e2e)', () => {
 
     it('should reject withdrawal with insufficient balance', async () => {
       return request(app.getHttpServer())
-        .post('/api/transactions')
+        .post('/api/v1/transactions')
         .set('Authorization', `Bearer ${token}`)
         .send({ type: 'WITHDRAWAL', amount: 99999 })
         .expect(422);
@@ -102,7 +102,7 @@ describe('Wallet Transactions (e2e)', () => {
 
     it('should reject zero amount', async () => {
       return request(app.getHttpServer())
-        .post('/api/transactions')
+        .post('/api/v1/transactions')
         .set('Authorization', `Bearer ${token}`)
         .send({ type: 'DEPOSIT', amount: 0 })
         .expect(400);
@@ -110,7 +110,7 @@ describe('Wallet Transactions (e2e)', () => {
 
     it('should reject negative amount', async () => {
       return request(app.getHttpServer())
-        .post('/api/transactions')
+        .post('/api/v1/transactions')
         .set('Authorization', `Bearer ${token}`)
         .send({ type: 'DEPOSIT', amount: -10 })
         .expect(400);
@@ -118,7 +118,7 @@ describe('Wallet Transactions (e2e)', () => {
 
     it('should reject invalid transaction type', async () => {
       return request(app.getHttpServer())
-        .post('/api/transactions')
+        .post('/api/v1/transactions')
         .set('Authorization', `Bearer ${token}`)
         .send({ type: 'INVALID', amount: 100 })
         .expect(400);
@@ -130,14 +130,14 @@ describe('Wallet Transactions (e2e)', () => {
       const key = 'idem-e2e-test-' + Date.now();
 
       const res1 = await request(app.getHttpServer())
-        .post('/api/transactions')
+        .post('/api/v1/transactions')
         .set('Authorization', `Bearer ${token}`)
         .set('Idempotency-Key', key)
         .send({ type: 'DEPOSIT', amount: 50 })
         .expect(201);
 
       const res2 = await request(app.getHttpServer())
-        .post('/api/transactions')
+        .post('/api/v1/transactions')
         .set('Authorization', `Bearer ${token}`)
         .set('Idempotency-Key', key)
         .send({ type: 'DEPOSIT', amount: 50 })
@@ -147,10 +147,10 @@ describe('Wallet Transactions (e2e)', () => {
     });
   });
 
-  describe('GET /api/balance', () => {
+  describe('GET /api/v1/balance', () => {
     it('should return correct running balance', async () => {
       const res = await request(app.getHttpServer())
-        .get('/api/balance')
+        .get('/api/v1/balance')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
@@ -160,10 +160,10 @@ describe('Wallet Transactions (e2e)', () => {
     });
   });
 
-  describe('GET /api/transactions', () => {
+  describe('GET /api/v1/transactions', () => {
     it('should list all user transactions', async () => {
       const res = await request(app.getHttpServer())
-        .get('/api/transactions')
+        .get('/api/v1/transactions')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
@@ -176,7 +176,7 @@ describe('Wallet Transactions (e2e)', () => {
 
     it('should filter by type', async () => {
       const res = await request(app.getHttpServer())
-        .get('/api/transactions?type=DEPOSIT')
+        .get('/api/v1/transactions?type=DEPOSIT')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
@@ -187,7 +187,7 @@ describe('Wallet Transactions (e2e)', () => {
 
     it('should support pagination', async () => {
       const res = await request(app.getHttpServer())
-        .get('/api/transactions?limit=1&offset=0')
+        .get('/api/v1/transactions?limit=1&offset=0')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
@@ -197,17 +197,17 @@ describe('Wallet Transactions (e2e)', () => {
     });
   });
 
-  describe('GET /api/transactions/:id', () => {
+  describe('GET /api/v1/transactions/:id', () => {
     it('should return a single transaction by ID', async () => {
       const listRes = await request(app.getHttpServer())
-        .get('/api/transactions?limit=1')
+        .get('/api/v1/transactions?limit=1')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
       const txId = listRes.body.transactions[0].id;
 
       const res = await request(app.getHttpServer())
-        .get(`/api/transactions/${txId}`)
+        .get(`/api/v1/transactions/${txId}`)
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
@@ -217,7 +217,7 @@ describe('Wallet Transactions (e2e)', () => {
 
     it('should return 404 for non-existent transaction', async () => {
       return request(app.getHttpServer())
-        .get('/api/transactions/non-existent-id')
+        .get('/api/v1/transactions/non-existent-id')
         .set('Authorization', `Bearer ${token}`)
         .expect(404);
     });
@@ -225,14 +225,14 @@ describe('Wallet Transactions (e2e)', () => {
     it('should return 404 for another user transaction', async () => {
       const otherToken = jwt.sign({ userId: 'other-user' }, JWT_SECRET, { expiresIn: '15m' });
       const listRes = await request(app.getHttpServer())
-        .get('/api/transactions?limit=1')
+        .get('/api/v1/transactions?limit=1')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
       const txId = listRes.body.transactions[0].id;
 
       return request(app.getHttpServer())
-        .get(`/api/transactions/${txId}`)
+        .get(`/api/v1/transactions/${txId}`)
         .set('Authorization', `Bearer ${otherToken}`)
         .expect(404);
     });

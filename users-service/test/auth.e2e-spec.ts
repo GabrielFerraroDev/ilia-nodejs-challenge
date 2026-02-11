@@ -53,10 +53,10 @@ describe('Users Auth (e2e)', () => {
     });
   });
 
-  describe('POST /api/auth/register', () => {
+  describe('POST /api/v1/auth/register', () => {
     it('should register a new user', async () => {
       const res = await request(app.getHttpServer())
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send(testUser)
         .expect(201);
 
@@ -70,23 +70,23 @@ describe('Users Auth (e2e)', () => {
 
     it('should reject duplicate email', async () => {
       return request(app.getHttpServer())
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send(testUser)
         .expect(409);
     });
 
     it('should reject invalid email', async () => {
       return request(app.getHttpServer())
-        .post('/api/auth/register')
+        .post('/api/v1/auth/register')
         .send({ name: 'Test', email: 'not-an-email', password: 'Secret123!' })
         .expect(400);
     });
   });
 
-  describe('POST /api/auth/login', () => {
+  describe('POST /api/v1/auth/login', () => {
     it('should login and return accessToken + set cookie', async () => {
       const res = await request(app.getHttpServer())
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: testUser.email, password: testUser.password })
         .expect(200);
 
@@ -103,23 +103,23 @@ describe('Users Auth (e2e)', () => {
 
     it('should reject wrong password', async () => {
       return request(app.getHttpServer())
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: testUser.email, password: 'WrongPass' })
         .expect(401);
     });
 
     it('should reject non-existent user', async () => {
       return request(app.getHttpServer())
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({ email: 'nonexistent@test.com', password: 'Secret123!' })
         .expect(401);
     });
   });
 
-  describe('GET /api/users/me', () => {
+  describe('GET /api/v1/users/me', () => {
     it('should return user profile', async () => {
       const res = await request(app.getHttpServer())
-        .get('/api/users/me')
+        .get('/api/v1/users/me')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -132,15 +132,15 @@ describe('Users Auth (e2e)', () => {
 
     it('should reject unauthenticated request', async () => {
       return request(app.getHttpServer())
-        .get('/api/users/me')
+        .get('/api/v1/users/me')
         .expect(401);
     });
   });
 
-  describe('PUT /api/users/me', () => {
+  describe('PUT /api/v1/users/me', () => {
     it('should update user name', async () => {
       const res = await request(app.getHttpServer())
-        .put('/api/users/me')
+        .put('/api/v1/users/me')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({ name: 'Updated E2E User' })
         .expect(200);
@@ -149,10 +149,10 @@ describe('Users Auth (e2e)', () => {
     });
   });
 
-  describe('POST /api/auth/refresh', () => {
+  describe('POST /api/v1/auth/refresh', () => {
     it('should return new access token with valid refresh cookie', async () => {
       const res = await request(app.getHttpServer())
-        .post('/api/auth/refresh')
+        .post('/api/v1/auth/refresh')
         .set('Cookie', cookies)
         .expect(200);
 
@@ -161,17 +161,17 @@ describe('Users Auth (e2e)', () => {
 
     it('should reject without refresh cookie', async () => {
       const res = await request(app.getHttpServer())
-        .post('/api/auth/refresh')
+        .post('/api/v1/auth/refresh')
         .expect(200);
 
       expect(res.body.statusCode).toBe(401);
     });
   });
 
-  describe('POST /api/auth/logout', () => {
+  describe('POST /api/v1/auth/logout', () => {
     it('should clear refresh token cookie', async () => {
       const res = await request(app.getHttpServer())
-        .post('/api/auth/logout')
+        .post('/api/v1/auth/logout')
         .set('Cookie', cookies)
         .expect(204);
 
@@ -181,7 +181,7 @@ describe('Users Auth (e2e)', () => {
 
     it('should reject refresh after logout', async () => {
       return request(app.getHttpServer())
-        .post('/api/auth/refresh')
+        .post('/api/v1/auth/refresh')
         .set('Cookie', cookies)
         .expect(401);
     });

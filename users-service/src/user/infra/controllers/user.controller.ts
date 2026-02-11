@@ -9,7 +9,7 @@ import { DeleteUserUseCase } from '../../application/use-cases/delete-user.use-c
 import { WalletService } from '../../../wallet/wallet.service';
 import { UpdateUserDto } from '../../application/dto/update-user.dto';
 
-@Controller('api/users')
+@Controller('api/v1/users')
 @UseGuards(AuthGuard('jwt'))
 export class UserController {
   constructor(
