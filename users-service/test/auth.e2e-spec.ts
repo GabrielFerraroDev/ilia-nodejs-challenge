@@ -10,7 +10,7 @@ describe('Users Auth (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let accessToken: string;
-  let cookies: string | string[];
+  let cookies: string[];
 
   const testUser = {
     name: 'E2E Test User',
@@ -97,7 +97,7 @@ describe('Users Auth (e2e)', () => {
       });
 
       accessToken = res.body.accessToken;
-      cookies = res.headers['set-cookie'];
+      cookies = res.headers['set-cookie'] as unknown as string[];
       expect(cookies).toBeDefined();
     });
 
