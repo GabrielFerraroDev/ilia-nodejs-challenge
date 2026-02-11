@@ -19,6 +19,14 @@ import { HealthController } from './health.controller';
         level: process.env.LOG_LEVEL || 'info',
         genReqId: (req) => req.headers['x-correlation-id'] || randomUUID(),
         customProps: () => ({ service: 'users-service' }),
+        redact: {
+          paths: [
+            'req.headers.authorization',
+            'req.headers.cookie',
+            'req.headers["set-cookie"]',
+          ],
+          censor: '[REDACTED]',
+        },
       },
     }),
     PrometheusModule.register({ defaultMetrics: { enabled: true }, path: '/metrics' }),
