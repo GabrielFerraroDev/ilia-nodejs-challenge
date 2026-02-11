@@ -174,6 +174,21 @@ This means you can swap Prisma for any other data source without touching busine
 - **users** — `id` (UUID PK), `name`, `email` (unique), `password` (bcrypt), `created_at`, `updated_at`
 - **refresh_tokens** — `id` (UUID PK), `token` (unique), `user_id` (FK), `expires_at`, `created_at`, `revoked_at`
 
+### Index Strategy
+
+All high-frequency queries are backed by targeted indexes for O(1) or O(log n) lookups:
+
+| Query | Index | Complexity |
+|---|---|---|
+| Get balance | `ledger_entries(user_id, id)` composite | **O(1)** — backward scan, `LIMIT 1` |
+| Find transaction by ID | `transactions(id)` PK | **O(1)** |
+| Idempotency check | `transactions(idempotency_key)` unique | **O(1)** |
+| List transactions (paginated) | `transactions(user_id, created_at)` composite | **O(log n)** — index-ordered, no sort |
+| List transactions by type | `transactions(user_id, type, created_at)` composite | **O(log n)** — covers filtered + sorted |
+| Find user by email | `users(email)` unique | **O(1)** |
+| Refresh token lookup | `refresh_tokens(token)` unique | **O(1)** |
+| Expired token cleanup | `refresh_tokens(expires_at)` | **O(log n)** — range scan |
+
 ## Transaction Safety
 
 Financial operations use multiple safety mechanisms:
