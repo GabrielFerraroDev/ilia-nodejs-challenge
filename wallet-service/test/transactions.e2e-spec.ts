@@ -43,7 +43,9 @@ describe('Wallet Transactions (e2e)', () => {
       return request(app.getHttpServer())
         .get('/health')
         .expect(200)
-        .expect({ status: 'ok' });
+        .expect((res) => {
+          expect(res.body.status).toBe('ok');
+        });
     });
   });
 
