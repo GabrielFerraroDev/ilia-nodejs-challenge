@@ -17,8 +17,8 @@ model Transaction {
   createdAt      DateTime        @default(now()) @map("created_at")
   ledgerEntry    LedgerEntry?
 
-  @@index([userId])
-  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([userId, type, createdAt])
   @@map("transactions")
 }
 
