@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { LogoutUseCase } from './logout.use-case';
 
 describe('LogoutUseCase', () => {
@@ -16,9 +17,10 @@ describe('LogoutUseCase', () => {
   });
 
   it('should revoke the refresh token when it exists and is not revoked', async () => {
+    const tokenHash = createHash('sha256').update('some-token').digest('hex');
     refreshTokenRepo.findByToken.mockResolvedValue({
       id: 'rt-1',
-      token: 'some-token',
+      token: tokenHash,
       userId: 'user-1',
       expiresAt: new Date(Date.now() + 86400000),
       revokedAt: null,
@@ -27,14 +29,15 @@ describe('LogoutUseCase', () => {
 
     await useCase.execute('some-token');
 
-    expect(refreshTokenRepo.findByToken).toHaveBeenCalledWith('some-token');
-    expect(refreshTokenRepo.revoke).toHaveBeenCalledWith('some-token');
+    expect(refreshTokenRepo.findByToken).toHaveBeenCalledWith(tokenHash);
+    expect(refreshTokenRepo.revoke).toHaveBeenCalledWith(tokenHash);
   });
 
   it('should not revoke when token is already revoked', async () => {
+    const tokenHash = createHash('sha256').update('some-token').digest('hex');
     refreshTokenRepo.findByToken.mockResolvedValue({
       id: 'rt-1',
-      token: 'some-token',
+      token: tokenHash,
       userId: 'user-1',
       expiresAt: new Date(Date.now() + 86400000),
       revokedAt: new Date(),

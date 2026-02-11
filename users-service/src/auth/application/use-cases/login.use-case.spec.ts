@@ -52,7 +52,7 @@ describe('LoginUseCase', () => {
     expect(jwtService.sign).toHaveBeenCalledWith({ userId: 'user-1' });
     expect(refreshTokenRepo.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        token: expect.any(String),
+        token: expect.stringMatching(/^[a-f0-9]{64}$/),
         userId: 'user-1',
         expiresAt: expect.any(Date),
       }),

@@ -38,6 +38,34 @@ export class TransactionRepository extends ITransactionRepository {
     description?: string;
     idempotencyKey?: string;
   }): Promise<{ transaction: Transaction; ledgerEntry: LedgerEntry }> {
+    const MAX_RETRIES = 3;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        return await this.executeCreateWithLedger(data);
+      } catch (error) {
+        const isSerializationFailure =
+          error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034';
+
+        if (!isSerializationFailure || attempt === MAX_RETRIES) {
+          throw error;
+        }
+
+        const jitter = Math.random() * 50 * attempt;
+        await new Promise((resolve) => setTimeout(resolve, jitter));
+      }
+    }
+
+    throw new AppError('Transaction failed after retries', 500);
+  }
+
+  private async executeCreateWithLedger(data: {
+    userId: string;
+    type: TransactionType;
+    amount: number;
+    description?: string;
+    idempotencyKey?: string;
+  }): Promise<{ transaction: Transaction; ledgerEntry: LedgerEntry }> {
     return this.prisma.$transaction(async (tx) => {
       const lockResult = await tx.$queryRaw<{ running_balance: Prisma.Decimal }[]>`
         SELECT COALESCE(
