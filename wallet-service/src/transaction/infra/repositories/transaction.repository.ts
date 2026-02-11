@@ -74,15 +74,16 @@ export class TransactionRepository extends ITransactionRepository {
         ) as running_balance
       `;
 
-      const currentBalance = Number(lockResult[0]?.running_balance ?? 0);
+      const currentBalance = new Prisma.Decimal(lockResult[0]?.running_balance ?? 0);
+      const amount = new Prisma.Decimal(data.amount);
 
-      if (data.type === TransactionType.WITHDRAWAL && currentBalance < data.amount) {
+      if (data.type === TransactionType.WITHDRAWAL && currentBalance.lessThan(amount)) {
         throw new AppError('Insufficient balance', 422);
       }
 
       const newBalance = data.type === TransactionType.DEPOSIT
-        ? currentBalance + data.amount
-        : currentBalance - data.amount;
+        ? currentBalance.add(amount)
+        : currentBalance.sub(amount);
 
       const transaction = await tx.transaction.create({
         data: {
