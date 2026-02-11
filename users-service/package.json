@@ -27,6 +27,7 @@
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.3.0",
     "@prisma/client": "^5.10.0",
+    "amqp-connection-manager": "^5.0.0",
     "amqplib": "^0.10.3",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
@@ -47,8 +48,13 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^20.11.5",
     "@types/passport-jwt": "^4.0.1",
+    "@types/supertest": "^6.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.55.0",
+    "@typescript-eslint/parser": "^8.55.0",
+    "eslint": "^8.57.1",
     "jest": "^30.2.0",
     "prisma": "^5.10.0",
+    "supertest": "^7.2.2",
     "ts-jest": "^29.4.6",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
@@ -56,11 +62,21 @@
     "typescript": "^5.3.3"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "transform": { "^.+\\.ts$": "ts-jest" },
-    "collectCoverageFrom": ["**/*.ts", "!**/node_modules/**", "!**/dist/**"],
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.ts",
+      "!**/node_modules/**",
+      "!**/dist/**"
+    ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   }
