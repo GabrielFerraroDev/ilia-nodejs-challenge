@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  wallet-service:
+    name: Wallet Service
+    runs-on: ubuntu-latest
+
+    services:
+      wallet-db:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: wallet_user
+          POSTGRES_PASSWORD: wallet_pass
+          POSTGRES_DB: wallet_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wallet_user -d wallet_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: wallet-service
+
+    env:
+      DATABASE_URL: postgresql://wallet_user:wallet_pass@localhost:5432/wallet_db
+      JWT_SECRET: ILIACHALLENGE
+      JWT_INTERNAL_SECRET: ILIACHALLENGE_INTERNAL
+      RABBITMQ_URL: amqp://localhost:5672
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: wallet-service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Run migrations
+        run: npx prisma migrate deploy
+
+      - name: E2E tests
+        run: npm run test:e2e
+
+  users-service:
+    name: Users Service
+    runs-on: ubuntu-latest
+
+    services:
+      users-db:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: users_user
+          POSTGRES_PASSWORD: users_pass
+          POSTGRES_DB: users_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U users_user -d users_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: users-service
+
+    env:
+      DATABASE_URL: postgresql://users_user:users_pass@localhost:5432/users_db
+      JWT_SECRET: ILIACHALLENGE
+      JWT_INTERNAL_SECRET: ILIACHALLENGE_INTERNAL
+      JWT_REFRESH_SECRET: ILIACHALLENGE_REFRESH
+      RABBITMQ_URL: amqp://localhost:5672
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: users-service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Run migrations
+        run: npx prisma migrate deploy
+
+      - name: E2E tests
+        run: npm run test:e2e
