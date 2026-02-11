@@ -180,13 +180,10 @@ describe('Users Auth (e2e)', () => {
     });
 
     it('should reject refresh after logout', async () => {
-      const res = await request(app.getHttpServer())
+      return request(app.getHttpServer())
         .post('/api/auth/refresh')
         .set('Cookie', cookies)
-        .expect(200);
-
-      // Token was revoked, should fail
-      expect(res.body.statusCode || res.body.error).toBeDefined();
+        .expect(401);
     });
   });
 });
