@@ -1,5 +1,8 @@
+import { randomUUID } from 'crypto';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { LoggerModule } from 'nestjs-pino';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
@@ -8,6 +11,17 @@ import { HealthController } from './health.controller';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        transport: process.env.NODE_ENV !== 'production'
+          ? { target: 'pino-pretty', options: { colorize: true } }
+          : undefined,
+        level: process.env.LOG_LEVEL || 'info',
+        genReqId: (req) => req.headers['x-correlation-id'] || randomUUID(),
+        customProps: () => ({ service: 'users-service' }),
+      },
+    }),
+    PrometheusModule.register({ defaultMetrics: { enabled: true }, path: '/metrics' }),
     PrismaModule,
     AuthModule,
     UserModule,

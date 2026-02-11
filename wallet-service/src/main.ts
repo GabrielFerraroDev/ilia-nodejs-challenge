@@ -1,11 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ValidationPipe } from '@nestjs/common';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(Logger));
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
@@ -32,8 +34,9 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
   await app.listen(port);
 
-  console.log(`Wallet service running on port ${port}`);
-  console.log('RabbitMQ microservice started');
+  const logger = app.get(Logger);
+  logger.log(`Wallet service running on port ${port}`);
+  logger.log('RabbitMQ microservice started');
 }
 
 bootstrap();
