@@ -211,6 +211,7 @@ Financial operations use multiple safety mechanisms:
 4. **Idempotency** — `Idempotency-Key` header prevents duplicate transactions (24h TTL)
 5. **Running balance** — Each ledger entry stores the computed balance, enabling O(1) balance queries
 6. **Serialization retry** — Automatic retry (3 attempts with jitter) on Postgres serialization conflicts (`P2034`)
+7. **Exact decimal arithmetic** — `Prisma.Decimal` (decimal.js) used for all money math; no JS floating-point in financial calculations
 
 ## Inter-Service Communication
 
@@ -296,7 +297,7 @@ npm run dev
 | Internal service auth | Separate `JWT_INTERNAL_SECRET` + `InternalAuthGuard` |
 | Transaction safety | Serializable isolation + `FOR UPDATE` lock + atomic ledger + retry with jitter |
 | Idempotency | `Idempotency-Key` header + DB unique constraint + 24h TTL records |
-| Decimal money handling | `Decimal(12,2)` in Prisma schema, `Number()` conversions in domain |
+| Decimal money handling | `Decimal(12,2)` in Prisma schema, `Prisma.Decimal` arithmetic in domain, `Number()` only for read serialization |
 | Unit tests | 33 tests (14 wallet + 19 users) covering all use cases |
 | E2E tests | 31 tests (17 wallet + 14 users) against real Postgres |
 | CI/CD pipeline | GitHub Actions: lint → build → unit → e2e with ephemeral Postgres |
