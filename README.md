@@ -1,89 +1,228 @@
-# ília - Code Challenge NodeJS
-**English**
-##### Before we start ⚠️
-**Please create a fork from this repository**
+# ília - NodeJS Challenge
 
-## The Challenge:
-One of the ília Digital verticals is Financial and to level your knowledge we will do a Basic Financial Application and for that we divided this Challenge in 2 Parts.
+Production-grade financial application with two microservices: **Wallet Service** and **Users Service**, built with **Clean Architecture**, **SOLID principles**, and **TypeScript**.
 
-The first part is mandatory, which is to create a Wallet microservice to store the users' transactions, the second part is optional (*for Seniors, it's mandatory*) which is to create a Users Microservice with integration between the two microservices (Wallet and Users), using internal communications between them, that can be done in any of the following strategies: gRPC, REST, Kafka or via Messaging Queues and this communication must have a different security of the external application (JWT, SSL, ...), **Development in javascript (Node) is required.**
+## Quick Start
 
-![diagram](diagram.png)
+> **Only requirement:** [Docker](https://docs.docker.com/get-docker/) and Docker Compose installed.
 
-### General Instructions:
-## Part 1 - Wallet Microservice
+```bash
+git clone <repo-url> && cd iliaTest
+docker-compose up --build
+```
 
-This microservice must be a digital Wallet where the user transactions will be stored 
+That's it. Wait for the containers to become healthy (~30s), then test:
 
-### The Application must have
+```bash
+# Health check
+curl http://localhost:3001/health   # → {"status":"ok","service":"wallet-service"}
+curl http://localhost:3002/health   # → {"status":"ok","service":"users-service"}
+```
 
-    - Project setup documentation (readme.md).
-    - Application and Database running on a container (Docker, ...).
-    - This Microservice must receive HTTP Request.
-    - Have a dedicated database (Postgres, MySQL, Mongo, DynamoDB, ...).
-    - JWT authentication on all routes (endpoints) the PrivateKey must be ILIACHALLENGE (passed by env var).
-    - Configure the Microservice port to 3001. 
-    - Gitflow applied with Code Review in each step, open a feature/branch, create at least one pull request and merge it with Main(master deprecated), this step is important to simulate a team work and not just a commit.
+### What `docker-compose up` starts
 
-## Part 2 - Microservice Users and Wallet Integration
+| Container          | Port  | Description                          |
+|--------------------|-------|--------------------------------------|
+| **wallet-db**      | 5432  | PostgreSQL for wallet data           |
+| **users-db**       | 5433  | PostgreSQL for user data             |
+| **rabbitmq**       | 5672  | AMQP broker (management UI: 15672)   |
+| **wallet-service** | 3001  | HTTP API + RabbitMQ consumer         |
+| **users-service**  | 3002  | HTTP API + RabbitMQ producer         |
 
-### The Application must have:
+## Try It Out
 
-    - Project setup documentation (readme.md).
-    - Application and Database running on a container (Docker, ...).
-    - This Microservice must receive HTTP Request.   
-    - Have a dedicated database(Postgres, MySQL, Mongo, DynamoDB...), you may use an Auth service like AWS Cognito.
-    - JWT authentication on all routes (endpoints) the PrivateKey must be ILIACHALLENGE (passed by env var).
-    - Set the Microservice port to 3002. 
-    - Gitflow applied with Code Review in each step, open a feature/branch, create at least one pull request and merge it with Main(master deprecated), this step is important to simulate a teamwork and not just a commit.
-    - Internal Communication Security (JWT, SSL, ...), if it is JWT the PrivateKey must be ILIACHALLENGE_INTERNAL (passed by env var).
-    - Communication between Microservices using any of the following: gRPC, REST, Kafka or via Messaging Queues (update your readme with the instructions to run if using a Docker/Container environment).
+```bash
+# 1. Register
+curl -s -X POST http://localhost:3002/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"John","email":"john@example.com","password":"123456"}'
 
-## Part 3 - Frontend Implementation - Fullstack candidates only
+# 2. Login (saves refresh token cookie)
+curl -s -c cookies.txt -X POST http://localhost:3002/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"john@example.com","password":"123456"}'
+# → {"accessToken":"eyJ...","user":{...}}
 
-In this challenge, you will build the frontend application for a FinTech Wallet platform, integrating with the backend microservices provided in the Node.js challenge.
+# 3. Deposit (replace <TOKEN> with the accessToken from step 2)
+curl -s -X POST http://localhost:3002/api/users/me/transactions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <TOKEN>" \
+  -d '{"type":"DEPOSIT","amount":100.50,"description":"Initial deposit"}'
 
-The application must allow users to authenticate, view their wallet balance, list transactions, and create credit or debit operations. The goal is to evaluate your ability to design a modern, secure, and well-structured UI that consumes microservice APIs, handles authentication via JWT, and provides a solid user experience with proper loading, error, and empty states.
+# 4. Check balance
+curl -s http://localhost:3002/api/users/me/balance \
+  -H "Authorization: Bearer <TOKEN>"
+# → {"userId":"...","balance":100.5}
 
-You may implement the solution using React, Vue, or Angular, following the required stack for the position you're running for and best practices outlined in the challenge.
+# 5. Withdraw
+curl -s -X POST http://localhost:3002/api/users/me/transactions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <TOKEN>" \
+  -d '{"type":"WITHDRAWAL","amount":30.00,"description":"ATM withdrawal"}'
 
-### Before you start ⚠️
+# 6. List transactions
+curl -s http://localhost:3002/api/users/me/transactions \
+  -H "Authorization: Bearer <TOKEN>"
 
-- **Create a separate folder for the Frontend project**
-- Frontend must be built in **Typescript**.  
-- The goal is to deliver a production-like UI that consumes the backend services:
-  - Wallet Service (port **3001**)
-  - Users Service (port **3002**, optional but mandatory for Senior)
+# 7. Refresh access token (uses HTTP-only cookie)
+curl -s -b cookies.txt -X POST http://localhost:3002/api/auth/refresh
 
-### Challenge Overview
+# 8. Logout
+curl -s -b cookies.txt -X POST http://localhost:3002/api/auth/logout
+```
 
-You will build a **web application** that allows a user to:
+## Architecture
 
-- Authenticate (if Users service exists)
-- View wallet balance
-- List transactions
-- Create transactions (credit/debit)
-- Handle loading, empty, and error states properly
+Each service follows **Clean Architecture** with NestJS modules. Every domain module is split into three layers:
 
-### Design Guidelines
+```
+src/
+├── main.ts                  # Bootstrap (HTTP + optional RMQ microservice)
+├── app.module.ts            # Root module
+├── health.controller.ts     # GET /health
+├── prisma/                  # PrismaService (global)
+├── common/                  # Shared filters, guards, errors
+└── <module>/                # e.g. transaction/, auth/, user/
+    ├── domain/              # Entities + repository interfaces (no framework deps)
+    │   ├── entities/
+    │   └── interfaces/repositories/
+    ├── application/         # Use cases + DTOs (business logic)
+    │   ├── dto/
+    │   └── use-cases/       # One class per use case, single execute() method
+    ├── infra/               # Framework-bound implementations
+    │   ├── controllers/     # HTTP / RabbitMQ controllers
+    │   ├── repositories/    # Prisma repository implementations
+    │   └── strategies/      # Passport strategies (auth only)
+    └── <module>.module.ts   # NestJS module wiring (interface → impl via DI)
+```
 
-No visual prototype or UI mockups will be provided for this challenge on purpose. This is intentional so we can evaluate your product sense, design judgment, and ability to translate business requirements into a coherent user experience. You should focus on creating a clean, modern, and intuitive interface that prioritizes usability and clarity of financial information. Pay special attention to information hierarchy (for example, making balance visibility prominent), form usability and validation, transaction readability, and clear feedback for system states such as loading, success, and errors. Consistency in layout, spacing, typography, and component reuse is important, as well as responsiveness and accessibility basics. *We are not evaluating graphic design skills*, but rather your ability to craft a professional, production-ready UI that engineers and users would find reliable and easy to use.
+### Dependency Inversion
 
-Feel free to leverage on any opensource components library.
+Use cases depend on **abstract repository classes** (domain layer), never on Prisma directly. The NestJS module wires the concrete implementation at startup:
 
-### Requirements 
-This frontend should reflect real-world practices:
-- secure JWT handling
-- clean UX flows
-- robust API integration
-- scalable component structure
-- test coverage where it matters
-- supports i18n
-- responsive design (supporting mobile browser)
+```typescript
+// transaction.module.ts
+{ provide: ITransactionRepository, useClass: TransactionRepository }
+```
 
-#### In the end, send us your fork repo updated. As soon as you finish, please let us know.
+This means you can swap Prisma for any other data source without touching business logic.
 
-#### We are available to answer any questions.
+### SOLID Principles
 
+- **S** — One use case per class (`CreateTransactionUseCase`, `LoginUseCase`, etc.)
+- **O** — Repositories are open for extension via abstract interfaces
+- **L** — All implementations are substitutable through their abstract classes
+- **I** — Granular repository interfaces per domain concept
+- **D** — Use cases depend on abstractions, not concrete Prisma implementations
 
-Happy coding! 🤓
+## Tech Stack
+
+| Category       | Technology                                                  |
+|----------------|-------------------------------------------------------------|
+| **Runtime**    | Node.js 20, TypeScript 5                                    |
+| **Framework**  | NestJS 10 (Express adapter)                                 |
+| **Database**   | PostgreSQL 16, Prisma ORM                                   |
+| **Messaging**  | RabbitMQ via `@nestjs/microservices` (RPC pattern)          |
+| **Auth**       | JWT (15min) + refresh token (7 days, HTTP-only cookie)      |
+| **Validation** | `class-validator` + `class-transformer` (NestJS pipes)      |
+| **Containers** | Docker + Docker Compose                                     |
+| **DI**         | NestJS IoC with interface-based custom providers            |
+
+## API Reference
+
+### Wallet Service — `localhost:3001`
+
+| Method | Endpoint               | Auth     | Description              |
+|--------|------------------------|----------|--------------------------|
+| GET    | /health                | —        | Health check             |
+| POST   | /api/transactions      | JWT      | Create transaction       |
+| GET    | /api/transactions      | JWT      | List transactions        |
+| GET    | /api/transactions/:id  | JWT      | Get transaction by ID    |
+| GET    | /api/balance           | JWT      | Get current balance      |
+| POST   | /internal/transactions | Internal | Create transaction (S2S) |
+| GET    | /internal/transactions | Internal | List transactions (S2S)  |
+| GET    | /internal/balance      | Internal | Get balance (S2S)        |
+
+**RabbitMQ patterns** (consumed by wallet service): `wallet.create_transaction`, `wallet.get_balance`, `wallet.list_transactions`, `wallet.get_transaction`
+
+### Users Service — `localhost:3002`
+
+| Method | Endpoint                   | Auth | Description                         |
+|--------|----------------------------|------|-------------------------------------|
+| GET    | /health                    | —    | Health check                        |
+| POST   | /api/auth/register         | —    | Register new user                   |
+| POST   | /api/auth/login            | —    | Login (returns JWT + cookie)        |
+| POST   | /api/auth/refresh          | —    | Refresh access token (uses cookie)  |
+| POST   | /api/auth/logout           | —    | Logout (revokes refresh token)      |
+| GET    | /api/users/me              | JWT  | Get profile                         |
+| PUT    | /api/users/me              | JWT  | Update profile                      |
+| DELETE | /api/users/me              | JWT  | Delete account                      |
+| GET    | /api/users/me/balance      | JWT  | Get wallet balance (via RabbitMQ)   |
+| POST   | /api/users/me/transactions | JWT  | Create transaction (via RabbitMQ)   |
+| GET    | /api/users/me/transactions | JWT  | List transactions (via RabbitMQ)    |
+
+## Database Design (3NF)
+
+### Wallet Service
+
+- **transactions** — `id` (UUID PK), `user_id`, `type` (DEPOSIT/WITHDRAWAL), `amount` (Decimal 12,2), `description`, `idempotency_key` (unique), `created_at`
+- **ledger_entries** — `id` (auto-increment PK), `transaction_id` (FK unique), `user_id`, `type`, `amount`, `running_balance`, `created_at`
+- **idempotency_records** — `id` (UUID PK), `key` (unique), `user_id`, `response_body`, `status_code`, `created_at`, `expires_at`
+
+### Users Service
+
+- **users** — `id` (UUID PK), `name`, `email` (unique), `password` (bcrypt), `created_at`, `updated_at`
+- **refresh_tokens** — `id` (UUID PK), `token` (unique), `user_id` (FK), `expires_at`, `created_at`, `revoked_at`
+
+## Transaction Safety
+
+Financial operations use multiple safety mechanisms:
+
+1. **Serializable isolation** — Prisma `$transaction` with `Serializable` isolation level
+2. **Row-level lock** — `SELECT ... FOR UPDATE` on the latest ledger entry prevents concurrent balance reads
+3. **Atomic ledger** — Transaction + ledger entry created in a single DB transaction
+4. **Idempotency** — `Idempotency-Key` header prevents duplicate transactions (24h TTL)
+5. **Running balance** — Each ledger entry stores the computed balance, enabling O(1) balance queries
+
+## Inter-Service Communication
+
+Services communicate via **RabbitMQ RPC** (request-reply pattern) instead of REST:
+
+1. **Users Service** sends a message to a named queue (e.g., `wallet.create_transaction`)
+2. **Wallet Service** consumes, processes, and replies
+3. **Users Service** receives the response and returns it to the HTTP client
+
+Benefits: **decoupling** (no URL knowledge), **resilience** (persistent queues), **scalability** (multiple consumers)
+
+## Local Development
+
+```bash
+# 1. Start only infrastructure
+docker-compose up wallet-db users-db rabbitmq -d
+
+# 2. Wallet service
+cd wallet-service
+cp .env.example .env
+npm install
+npx prisma migrate dev --name init
+npm run dev
+
+# 3. Users service (new terminal)
+cd users-service
+cp .env.example .env
+npm install
+npx prisma migrate dev --name init
+npm run dev
+```
+
+## Environment Variables
+
+| Variable             | Service | Description                             |
+|----------------------|---------|-----------------------------------------|
+| `PORT`               | Both    | Server port (default: 3001 / 3002)      |
+| `JWT_SECRET`         | Both    | JWT access token signing key            |
+| `JWT_INTERNAL_SECRET`| Wallet  | JWT signing key for S2S internal routes |
+| `DATABASE_URL`       | Both    | PostgreSQL connection string            |
+| `RABBITMQ_URL`       | Both    | RabbitMQ connection string              |
+
+> All secrets are injected via environment variables. Docker Compose provides sensible defaults for local development.
