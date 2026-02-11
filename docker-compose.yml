@@ -1,0 +1,86 @@
+services:
+  wallet-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: wallet_user
+      POSTGRES_PASSWORD: wallet_pass
+      POSTGRES_DB: wallet_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - wallet_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U wallet_user -d wallet_db']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  users-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: users_user
+      POSTGRES_PASSWORD: users_pass
+      POSTGRES_DB: users_db
+    ports:
+      - '5433:5432'
+    volumes:
+      - users_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U users_user -d users_db']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  wallet-service:
+    build: ./wallet-service
+    ports:
+      - '3001:3001'
+    environment:
+      PORT: 3001
+      JWT_SECRET: ${JWT_SECRET:-ILIACHALLENGE}
+      JWT_INTERNAL_SECRET: ${JWT_INTERNAL_SECRET:-ILIACHALLENGE_INTERNAL}
+      DATABASE_URL: postgresql://wallet_user:wallet_pass@wallet-db:5432/wallet_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      wallet-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  users-service:
+    build: ./users-service
+    ports:
+      - '3002:3002'
+    environment:
+      PORT: 3002
+      JWT_SECRET: ${JWT_SECRET:-ILIACHALLENGE}
+      JWT_INTERNAL_SECRET: ${JWT_INTERNAL_SECRET:-ILIACHALLENGE_INTERNAL}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-ILIACHALLENGE_REFRESH}
+      DATABASE_URL: postgresql://users_user:users_pass@users-db:5432/users_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      users-db:
+        condition: service_healthy
+
+volumes:
+  wallet_data:
+  users_data:
+  rabbitmq_data:
