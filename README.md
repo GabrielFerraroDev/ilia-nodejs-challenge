@@ -129,6 +129,17 @@ This means you can swap Prisma for any other data source without touching busine
 | **Containers** | Docker + Docker Compose                                     |
 | **DI**         | NestJS IoC with interface-based custom providers            |
 
+## API Documentation (Swagger)
+
+Both services expose interactive Swagger UI for exploring and testing the API:
+
+| Service          | Swagger UI                         |
+|------------------|------------------------------------|
+| **Wallet Service** | [http://localhost:3001/docs](http://localhost:3001/docs) |
+| **Users Service**  | [http://localhost:3002/docs](http://localhost:3002/docs) |
+
+All request/response DTOs, query parameters, and authentication requirements are documented with examples.
+
 ## API Reference
 
 ### Wallet Service — `localhost:3001`
@@ -293,4 +304,5 @@ npm run dev
 | Observability | Pino structured logging + Prometheus `/metrics` + correlation IDs |
 | API versioning | URI-based versioning (`/api/v1/...`), infrastructure routes unversioned |
 | Security hardening | Helmet headers, CORS, rate limiting (100 req/min), graceful shutdown |
+| API documentation | Swagger/OpenAPI UI at `/docs` with typed DTOs, examples, and auth schemes |
 | Security | Bcrypt passwords, SHA-256 hashed refresh tokens, sensitive header redaction |
